@@ -1,7 +1,6 @@
 const express = require('express');
 const rateLimit = require("express-rate-limit");
 const { dbConnectAvailableFlights, dbConnectBookings } = require('./mongodb');
-const rateLimit = require('express-rate-limit');
 
 const app = express();
 app.use(express.json());
