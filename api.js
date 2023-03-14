@@ -1,4 +1,5 @@
 const express = require('express');
+const rateLimit = require("express-rate-limit");
 const { dbConnectAvailableFlights, dbConnectBookings } = require('./mongodb');
 const rateLimit = require('express-rate-limit');
 
@@ -6,10 +7,13 @@ const app = express();
 app.use(express.json());
 const limiter = rateLimit({
     windowMs: 1 * 60 * 1000, // 1 minute
-    max: 5 // 5 requests
+    max: 5, // 5 requests
+    message: "Too many requests, please try again later."
   });
-
-// app.use(express.bodyParser())
+const increaseLimit = (req, res, next) => {
+    limiter.max += 1; // increase the max limit by 1
+    next();
+};
 const jwt = require('jsonwebtoken');
 
 function generateAccessToken(user) {
@@ -32,7 +36,7 @@ app.get('/api/auth', (req, res) => {
     res.json({ expires: expiresIn, token: token });
 });
 
-app.get('/api/flight/retrieve',limiter, async (req, resp) =>{
+app.get('/api/flight/retrieve', increaseLimit, limiter, async (req, resp) =>{
     //http://localhost:5000/retrieve?pnr=A1B23C&lastName=XYZ
     const { pnr, lastName } = req.query;
     console.log({ pnr, lastName });
@@ -46,7 +50,7 @@ app.get('/api/flight/retrieve',limiter, async (req, resp) =>{
 });
 
 
-app.post('/api/flight/book', limiter, async (req, resp) => {
+app.post('/api/flight/book', increaseLimit, limiter, async (req, resp) => {
     
     let bookDetails = req.body;
     
@@ -82,7 +86,7 @@ app.post('/api/flight/book', limiter, async (req, resp) => {
 
 
 
-app.post('/api/flight/details', async (req, res) => {
+app.post('/api/flight/details', increaseLimit, limiter, async (req, res) => {
     try {
         const { origin, destination, flightDate } = req.body;
   
