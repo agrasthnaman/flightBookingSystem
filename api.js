@@ -1,6 +1,5 @@
 const express = require('express');
-const dbConnectBookings = require("./mongodb")
-const dbConnectAvailableFlights = require("./mongodb")
+const { dbConnectAvailableFlights, dbConnectBookings } = require('./mongodb');
 const rateLimit = require('express-rate-limit');
 
 const app = express();
@@ -52,29 +51,59 @@ app.post('/api/flight/book', limiter, async (req, resp) => {
     let bookDetails = req.body;
     
     let flightData  = await dbConnectAvailableFlights();
+    let bookingData  =await dbConnectBookings();
     flightData  = await flightData.find().toArray();
     
-    const seats = flightData.seats;
-    const seatPriceMap = flightData.seatPriceMap;
+    const seats = flightData[0].seats;
+    const seatPriceMap = flightData[0].seatPriceMap;
     const passengerDetails = bookDetails.passengerDetails;
     const newPnr = Math.random().toString(36).substring(2, 8).toUpperCase();
     bookDetails.pnr = newPnr;
     let totalCost = 0;
-    console.log({seats, seatPriceMap})
-    // for (const passenger of passengerDetails) {
-    //     if (seats.includes(passenger.seat)) {
-    //         const seatIndex = seats.indexOf(passenger.seat);
-    //         totalCost += seatPriceMap[seatIndex];
-    //     }
-    // }
-    console.log(flightData);
-    // console.log(numberOfPassenger);
-    resp.send({"name": "naman"});
-    // let result = await insert(req.body);
+    // console.log({seats, seatPriceMap, newPnr})
+    for (const passenger of passengerDetails) {
+        if (seats.includes(passenger.seat)) {
+            const seatIndex = seats.indexOf(passenger.seat);
+            totalCost += seatPriceMap[seatIndex];
+        }
+    }
+    bookDetails.total = totalCost;
+    bookDetails.pnr = newPnr;
+    console.log(bookDetails);
+    try{
+        let result = await bookingData.insertOne(bookDetails);
+    } catch (err) {
+        // Handle errors
+        console.error(err);
+        resp.status(500).send('Error inserting document into collection');
+      }
+    resp.send({pnr: newPnr, total: totalCost});
 })
 
 
 
+app.post('/api/flight/details', async (req, res) => {
+    try {
+        const { origin, destination, flightDate } = req.body;
+  
+        let flightData  = await dbConnectAvailableFlights();
+        flightData  = await flightData.find().toArray();
+        console.log({ origin, destination, flightDate });
+        let ftDate = new Date(flightDate);
+        const isoDate = ftDate.toISOString().slice(0,10) + 'T00:00:00Z';
+        flightData  = await flightData.find({ origin: origin, destination : destination, flightDate: isoDate }).toArray();
 
+        // If no matching flights found
+        if (!flightData) {
+        return res.status(404).json({ message: 'No flights found' });
+        }
+
+        // Return flight details in response
+        return res.json(flightData);
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  });
 
 app.listen(5000)

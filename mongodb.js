@@ -21,6 +21,6 @@ async function dbConnectBookings(){
     // let response = await availableFlights.find({}).toArray();
     // console.log(response); 
 }
+dbConnectAvailableFlights();
 
-module.exports = dbConnectAvailableFlights;
-module.exports = dbConnectBookings;
+module.exports = { dbConnectAvailableFlights, dbConnectBookings };
