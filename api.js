@@ -15,7 +15,6 @@ const increaseLimit = (req, res, next) => {
 };
 
 const jwt = require('jsonwebtoken');
-
 const secretKey = 'mysecretkey';
 
 const payload = {
@@ -49,14 +48,12 @@ function authMiddleware(req, res, next) {
 
 
 app.get('/api/flight/retrieve', authMiddleware, increaseLimit, limiter, async (req, resp) =>{
-    //http://localhost:5000/retrieve?pnr=A1B23C&lastName=XYZ
     const { pnr, lastName } = req.query;
 
     //Retrieve passenger and flight details with given PNR and lastName of passenger
     let bookingPnr = pnr;
     let bookingData  =await dbConnectBookings();
-    bookingData  = await bookingData.find({pnr : bookingPnr}).toArray();
-    // bookingData  = await bookingData.find({pnr : bookingPnr}).toArray();
+    bookingData  = await bookingData.find({pnr : bookingPnr, "passengerDetails.lastName": lastName}).toArray();
     resp.send(bookingData)
 });
 
@@ -98,7 +95,7 @@ app.post('/api/flight/book', authMiddleware, increaseLimit, limiter, async (req,
 
 
 
-app.post('/api/flight/details', increaseLimit, limiter, async (req, res) => {
+app.post('/api/flight/details', authMiddleware, increaseLimit, limiter, async (req, res) => {
 
   const { origin, destination, flightDate } = req.body;
   let flightData  = await dbConnectAvailableFlights();
