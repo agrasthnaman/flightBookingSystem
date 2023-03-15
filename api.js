@@ -27,8 +27,8 @@ const options = {
   expiresIn: '1h'
 };
 
-const Stoken = jwt.sign(payload, secretKey, options);
-// console.log(Stoken);
+const securityToken = jwt.sign(payload, secretKey, options);
+// console.log(securityToken);
 
 function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -60,8 +60,12 @@ app.get('/api/flight/retrieve', authMiddleware, increaseLimit, limiter, async (r
     resp.send(bookingData)
 });
 
+app.get('/api/auth', increaseLimit, limiter, async (req, resp) =>{
+  resp.send({expires: options.expiresIn, token: securityToken})
+});
 
-app.post('/api/flight/book', increaseLimit, limiter, async (req, resp) => {
+
+app.post('/api/flight/book', authMiddleware, increaseLimit, limiter, async (req, resp) => {
     
     let bookDetails = req.body;
     
