@@ -1,0 +1,95 @@
+openapi: "3.0.0"
+info:
+  version: "0.0.1"
+  title: "Flight Booking System"
+  description: "Everything about the flights"
+
+tags:
+  - name: flight
+paths:
+  /api/flight/details:
+    post:
+      tags:
+        - flight
+      summary: "Retrieve all available flights"
+      description: "Get all available flights by origin, destination and flight date"
+      # parameters:
+      #   - name: origin
+      #     in: query
+      #     description: Origin of the flight
+      #     required: true
+      #     schema:
+      #       type: string
+      #   - name: destination
+      #     in: query
+      #     description: Origin of the flight
+      #     required: true
+      #     schema:
+      #       type: string
+      #   - name: Flight Date
+      #     in: query
+      #     description: Origin of the flight
+      #     required: true
+      #     schema:
+      #       type: number
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Invalid Input
+        '404':
+          description: Flights not found
+  /api/flight/book:
+    post:
+      tags:
+        - flight
+      summary: "Book Flight"
+      description: "Accept passenger details and book the flight"
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Invalid Input
+        '404':
+          description: Flights not found
+  /api/flight/retrieve:
+    get:
+      tags:
+        - flight
+      summary: "Retrieve passenger and flight details"
+      description: "Get the flight details for a booking"
+      parameters:
+        - name: pnr
+          in: query
+          description: PNR status
+          required: true
+          schema:
+            type: string
+        - name: lastname
+          in: query
+          description: Origin of the flight
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Invalid Input
+        '404':
+          description: Flights not found
+  /api/auth:
+    get:
+      tags:
+        - flight
+      summary: "Fetch API Authentication token"
+      description: "Get the API authentication token to send to other API Authentication header"
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Invalid Input
+        '404':
+          description: Flights not found
+          
+          

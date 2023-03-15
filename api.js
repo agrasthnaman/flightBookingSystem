@@ -13,32 +13,44 @@ const increaseLimit = (req, res, next) => {
     limiter.max += 1; // increase the max limit by 1
     next();
 };
+
 const jwt = require('jsonwebtoken');
 
-function generateAccessToken(user) {
-  const payload = {
-    sub: user.id,
-    name: user.name,
-    email: user.email
-  };
-  const options = {
-    expiresIn: '1h'
-  };
-  const secret = 'my-secret-key';
+const secretKey = 'mysecretkey';
 
-  return jwt.sign(payload, secret, options);
+const payload = {
+  email: 'agrasthnaman.an.doe@example.com',
+  role: 'user'
+};
+
+const options = {
+  expiresIn: '1h'
+};
+
+const Stoken = jwt.sign(payload, secretKey, options);
+// console.log(Stoken);
+
+function authMiddleware(req, res, next) {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader) {
+    return res.status(401).json({ message: 'Authorization header is missing' });
+  }
+
+  const token = authHeader.split(' ')[1];
+  try {
+    const decodedToken = jwt.verify(token, secretKey);
+    req.userData = { email: decodedToken.email };
+    next();
+  } catch (err) {
+    return res.status(401).json({ message: 'Invalid or expired token' });
+  }
 }
-app.get('/api/auth', (req, res) => {
-    // verify the user's credentials and generate an access token
-    const expiresIn = 3599; // expiration time in seconds
-    const token = generateAccessToken(); // function to generate access token
-    res.json({ expires: expiresIn, token: token });
-});
 
-app.get('/api/flight/retrieve', increaseLimit, limiter, async (req, resp) =>{
+
+app.get('/api/flight/retrieve', authMiddleware, increaseLimit, limiter, async (req, resp) =>{
     //http://localhost:5000/retrieve?pnr=A1B23C&lastName=XYZ
     const { pnr, lastName } = req.query;
-    console.log({ pnr, lastName });
 
     //Retrieve passenger and flight details with given PNR and lastName of passenger
     let bookingPnr = pnr;
@@ -56,14 +68,12 @@ app.post('/api/flight/book', increaseLimit, limiter, async (req, resp) => {
     let flightData  = await dbConnectAvailableFlights();
     let bookingData  =await dbConnectBookings();
     flightData  = await flightData.find().toArray();
-    
     const seats = flightData[0].seats;
     const seatPriceMap = flightData[0].seatPriceMap;
     const passengerDetails = bookDetails.passengerDetails;
     const newPnr = Math.random().toString(36).substring(2, 8).toUpperCase();
     bookDetails.pnr = newPnr;
     let totalCost = 0;
-    // console.log({seats, seatPriceMap, newPnr})
     for (const passenger of passengerDetails) {
         if (seats.includes(passenger.seat)) {
             const seatIndex = seats.indexOf(passenger.seat);
@@ -72,7 +82,6 @@ app.post('/api/flight/book', increaseLimit, limiter, async (req, resp) => {
     }
     bookDetails.total = totalCost;
     bookDetails.pnr = newPnr;
-    console.log(bookDetails);
     try{
         let result = await bookingData.insertOne(bookDetails);
     } catch (err) {
@@ -86,27 +95,30 @@ app.post('/api/flight/book', increaseLimit, limiter, async (req, resp) => {
 
 
 app.post('/api/flight/details', increaseLimit, limiter, async (req, res) => {
-    try {
-        const { origin, destination, flightDate } = req.body;
+
+  const { origin, destination, flightDate } = req.body;
+  let flightData  = await dbConnectAvailableFlights();
   
-        let flightData  = await dbConnectAvailableFlights();
-        flightData  = await flightData.find().toArray();
-        console.log({ origin, destination, flightDate });
-        let ftDate = new Date(flightDate);
-        const isoDate = ftDate.toISOString().slice(0,10) + 'T00:00:00Z';
-        flightData  = await flightData.find({ origin: origin, destination : destination, flightDate: isoDate }).toArray();
-
-        // If no matching flights found
-        if (!flightData) {
-        return res.status(404).json({ message: 'No flights found' });
-        }
-
-        // Return flight details in response
-        return res.json(flightData);
-    } catch (error) {
-      console.error(error);
-      return res.status(500).json({ message: 'Server error' });
-    }
-  });
+  let ftDate = new Date(flightDate);
+  const isoDate = ftDate.toISOString().slice(0,10) + 'T00:00:00Z';
+  const result  = await flightData.find({origin: origin, destination: destination, flightDate: isoDate}).toArray();
+  // const result  = await flightData.findOne(query, (err, result) => {
+  //   if (err) {
+  //     console.log(err);
+  //     res.status(500).send('Error fetching flight details');
+  //     return;
+  //   }
+    
+    // Sending flight details in response
+  //   res.status(200).send(result);
+  // });
+  
+  if(result && result.length)
+    res.status(200).send(result);
+  else{
+    res.status(500).send('Error fetching flight details');
+  }
+    
+});
 
 app.listen(5000)
